@@ -46,6 +46,7 @@ class WaterMarkProcess():
         GREEN = '\033[92m' 
         YELLOW = '\033[93m'  
         RED = '\033[91m'  
+        RESET = '\033[0m' 
 
     def create_schema(self):
         schema_name = self.schema
@@ -73,30 +74,15 @@ class WaterMarkProcess():
 
 
 
-    def initial_insert_data(self):
+    def insert_data(self, triptid: int, customerid: int, datetime: datetime):
         schema_name = self.schema
         table_name = self.table
-        datetime = '2024-09-08 12:54:22'
         self.infoLogger(message=f"Insert data in '{table_name}'.")
         query = f"INSERT INTO {schema_name}.{table_name} values ( %s, %s ,%s )"
-        self.cursor.execute(query, (100, 200, datetime))
-        query = f"INSERT INTO {schema_name}.{table_name} values ( %s, %s ,%s )"
-        self.cursor.execute(query, (101, 201, datetime))
+        self.cursor.execute(query, (triptid, customerid, datetime))
         self.conn.commit()
         self.successLogger(message=f"Insert data in '{table_name}' OK.")
 
-
-    def next_insert_data(self):
-        schema_name = self.schema
-        table_name = self.table
-        datetime = '2024-09-08 18:54:22'
-        self.infoLogger(message=f"Next insert data in '{table_name}'.")
-        query = f"INSERT INTO {schema_name}.{table_name} values ( %s, %s ,%s )"
-        self.cursor.execute(query, (100, 200, datetime))
-        query = f"INSERT INTO {schema_name}.{table_name} values ( %s, %s ,%s )"
-        self.cursor.execute(query, (101, 201, datetime))
-        self.conn.commit()
-        self.successLogger(message=f"Next insert data in '{table_name}' OK.")
 
 
     def insert_watermark(self, datetime, commit=True):
@@ -168,7 +154,7 @@ class WaterMarkProcess():
         try:
             datetime_file = date_process.strftime('%H-%M-%S')
             date_file = date_process.strftime('%Y-%m-%d')
-            folder = self.dir + f'/incremental_load/{date_file}/'
+            folder = self.dir + f'/incremental_load/{self.schema}/{self.table}/{self.table}_{date_file}/'
             print(f'Folder: {folder}')
             os.makedirs(folder, exist_ok=True)
             return folder + f'{datetime_file}.csv'
@@ -236,7 +222,17 @@ class WaterMarkProcess():
         self.create_watermark_table()
         self.create_stored_procedure()
 
-        self.initial_insert_data()
+        self.insert_data(
+            triptid=100,
+            customerid=200,
+            datetime = '2024-09-08 12:54:22'
+        )
+        self.insert_data(
+            triptid=101,
+            customerid=201,
+            datetime = '2024-09-08 12:54:22'
+        )
+
         self.cursor.execute(f"SELECT MAX(LastModifiedTime) FROM {self.table}")
         max_datetime_first_insert = self.cursor.fetchone()[0]
         print(f'Max datetime from Table to update WatermarkTable with first insert: {max_datetime_first_insert}')
@@ -250,7 +246,17 @@ class WaterMarkProcess():
         )
 
 
-        self.next_insert_data()
+        self.insert_data(
+            triptid=102,
+            customerid=202,
+            datetime='2024-09-08 18:54:22'
+        )
+        self.insert_data(
+            triptid=103,
+            customerid=203,
+            datetime='2024-09-08 18:54:22'
+        )
+
         self.cursor.execute(f"SELECT MAX(LastModifiedTime) FROM {self.table}")
         max_datetime_second_insert = self.cursor.fetchone()[0]
         print(f'Max datetime from Table to update WatermarkTable with second insert: {max_datetime_second_insert}')
